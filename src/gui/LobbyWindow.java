@@ -8,13 +8,14 @@ import client.ClientSocketHandler;
 import common.model.Request;
 import common.model.User;
 import common.model.WordsMatch;
-import dao.MatchDAO;
 import dao.UserDAO;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.swing.*;
@@ -44,6 +45,9 @@ public class LobbyWindow extends JFrame{
     private JLabel welcomeLabel;
     private JLabel scoreLabel;
     
+    private final Map<String, User> onlineUsersMap = new HashMap<>();
+    private List<User> allUsersCache = new ArrayList<>();
+
     public LobbyWindow(ClientSocketHandler socketHandler, User currentUser) {
         this.socketHandler = socketHandler;
         this.currentUser = currentUser;
@@ -98,7 +102,7 @@ public class LobbyWindow extends JFrame{
         });
     }
     
-    // --- HÀM MỚI: Tạo Panel Thông Tin Cá Nhân ---
+
     private JPanel createInfoPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
@@ -120,8 +124,7 @@ public class LobbyWindow extends JFrame{
         panel.add(scoreLabel, BorderLayout.EAST);
         return panel;
     }
-    
-    // --- HÀM MỚI: Tạo Panel Tất Cả Người Chơi ---
+
     private JPanel createAllPlayersPanel() {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
         panel.setPreferredSize(new Dimension(250, 0));
@@ -194,7 +197,6 @@ public class LobbyWindow extends JFrame{
         return panel;
     }
 
-    // --- HÀM MỚI: Tạo Panel Bảng Xếp Hạng ---
     private JPanel createRankingPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
@@ -274,22 +276,32 @@ public class LobbyWindow extends JFrame{
         socketHandler.sendRequest(new Request("GET_MATCH_HISTORY", selectedUsernameForHistory));
     }
     
-    // --- Phương thức được SocketHandler gọi ---
+
 
     // Cập nhật JList với danh sách mới (cho online list - giữ lại để tương thích)
     public void updateOnlineList(List<User> userList) {
         System.out.println("[UI] updateOnlineList() được gọi. Số user: " + userList.size());
-        // Không cập nhật nữa vì giờ dùng getAllUsers
+        onlineUsersMap.clear();
+        for (User user : userList) {
+            onlineUsersMap.put(user.getUsername(), user);
+        }
+        refreshUserListWithStatuses();
     }
     
     // Cập nhật JList với tất cả người chơi từ database
     public void updateAllUsersList(List<User> userList) {
         System.out.println("[UI] updateAllUsersList() được gọi. Số user: " + userList.size());
-        userListModel.clear();
+        allUsersCache = new ArrayList<>();
         for (User user : userList) {
             System.out.println(" - " + user.getUsername() + ": " + user.getStatus());
-            userListModel.addElement(user);
+            allUsersCache.add(new User(
+                user.getUsername(),
+                user.getTotalScore(),
+                user.getTotalWins(),
+                user.getStatus()
+            ));
         }
+        refreshUserListWithStatuses();
     }
     
     // Hiển thị popup khi có lời mời
@@ -308,8 +320,7 @@ public class LobbyWindow extends JFrame{
         String[] responseData = {inviterUsername, responseType};
         socketHandler.sendRequest(new Request("INVITE_RESPONSE", responseData));
     }
-    
-    // --- HÀM MỚI: Cập nhật Bảng Xếp Hạng ---
+
     public void updateRankingTable(List<User> rankings) {
         // Xóa dữ liệu cũ
         rankingTableModel.setRowCount(0); 
@@ -343,6 +354,58 @@ public class LobbyWindow extends JFrame{
     // Lấy username đã lưu cho lịch sử đấu
     public String getSelectedUsernameForHistory() {
         return selectedUsernameForHistory;
+    }
+
+    private void refreshUserListWithStatuses() {
+        if (userListModel == null) {
+            return;
+        }
+
+        int previousSelection = userJList.getSelectedIndex();
+
+        userListModel.clear();
+
+        for (User baseUser : allUsersCache) {
+            User onlineUser = onlineUsersMap.get(baseUser.getUsername());
+            User displayUser;
+
+            if (onlineUser != null) {
+                displayUser = new User(
+                        onlineUser.getUsername(),
+                        onlineUser.getTotalScore(),
+                        onlineUser.getTotalWins(),
+                        onlineUser.getStatus()
+                );
+            } else {
+                displayUser = new User(
+                        baseUser.getUsername(),
+                        baseUser.getTotalScore(),
+                        baseUser.getTotalWins(),
+                        "Offline"
+                );
+            }
+
+            userListModel.addElement(displayUser);
+
+            if (displayUser.getUsername().equals(currentUser.getUsername())) {
+                currentUser.setTotalScore(displayUser.getTotalScore());
+                currentUser.setTotalWins(displayUser.getTotalWins());
+            }
+        }
+
+        if (onlineUsersMap.containsKey(currentUser.getUsername())) {
+            currentUser.setStatus(onlineUsersMap.get(currentUser.getUsername()).getStatus());
+        } else {
+            currentUser.setStatus("Offline");
+        }
+        updateCurrentUserInfo(currentUser);
+
+        if (previousSelection >= 0 && previousSelection < userListModel.size()) {
+            userJList.setSelectedIndex(previousSelection);
+        }
+
+        userJList.revalidate();
+        userJList.repaint();
     }
     
     // Hiển thị lịch sử đấu

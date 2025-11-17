@@ -164,6 +164,7 @@ public class ClientHandler implements Runnable{
             sendResponse(new Response("LOGIN_SUCCESS", successData));
             
             // (Gọi GameManager.broadcastOnlineList() để cập nhật sảnh cho mọi người)
+            GameManager.getInstance().broadcastOnlineList();
 
         } else {
             sendResponse(new Response("LOGIN_FAIL", "Sai tên đăng nhập hoặc mật khẩu!"));

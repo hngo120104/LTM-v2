@@ -95,7 +95,7 @@ public class Dictionary {
         // Tạo một mảng đếm ký tự cho các chữ cái có sẵn
         int[] letterCounts = new int[256]; // (Giả sử dùng ASCII)
         for (char c : availableLetters.toCharArray()) {
-            letterCounts[c]++;
+            letterCounts[c] += 5;
         }
 
         // Kiểm tra từng ký tự của từ

@@ -23,8 +23,8 @@ public class GameSession implements Runnable {
     private ClientHandler playerB;
     
     // --- THÊM CÁC BIẾN TRẠNG THÁI GAME ---
-    private final int MAX_TURNS = 10;
-    private final int TURN_DURATION_MS = 15000; // 15 giây
+    private final int MAX_TURNS = 3;
+    private final int TURN_DURATION_MS = 30000; // 30 giây
     private int scoreA = 0;
     private int scoreB = 0;
     private Set<String> usedWordsThisTurn; // Chống trùng lặp
@@ -89,25 +89,37 @@ public class GameSession implements Runnable {
     
     // --- HÀM MỚI: Tạo 7 chữ cái ngẫu nhiên ---
     private String generateLetters() {
-        // (Đây là hàm ví dụ đơn giản, bạn có thể làm phức tạp hơn)
-        // Chuyển thành một danh sách để dễ dàng xáo trộn
-        String characters = "ABCDEGHIKLMNOPQRSTUVXY";
-        
-        List<Character> charList = new ArrayList<>();
-        for (char c : characters.toCharArray()) {
-            charList.add(c);
+        String vowels = "AEIOU";
+        String consonants = "BCDGHKLMNPQRSTVXY";
+
+        List<Character> vowelList = new ArrayList<>();
+        for (char c : vowels.toCharArray()) {
+            vowelList.add(c);
         }
-        
-        // Xáo trộn ngẫu nhiên danh sách
+
+        List<Character> consonantList = new ArrayList<>();
+        for (char c : consonants.toCharArray()) {
+            consonantList.add(c);
+        }
+
+        Collections.shuffle(vowelList, ThreadLocalRandom.current());
+        Collections.shuffle(consonantList, ThreadLocalRandom.current());
+
+        List<Character> charList = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            charList.add(vowelList.get(i));
+        }
+        for (int i = 0; i < 4; i++) {
+            charList.add(consonantList.get(i));
+        }
         Collections.shuffle(charList, ThreadLocalRandom.current());
-        
-        // Lấy 7 chữ cái đầu tiên
+
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 7; i++) {
             sb.append(charList.get(i));
             sb.append("/");
         }
-        
+
         String initChars = sb.toString();
         return initChars.substring(0, initChars.length() - 1);
     }
